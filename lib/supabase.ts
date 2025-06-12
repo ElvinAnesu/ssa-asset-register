@@ -1,38 +1,54 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Types for our database
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_URL')
+}
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY')
+}
+
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  }
+)
+
+// Type helper for database tables
 export type Tables = {
   devices: {
     Row: {
       id: string
-      type: string
+      created_at: string
+      device_name: string
+      device_type: string
+      model_number: string
       serial_number: string
       assigned_to: string | null
       status: string
-      date_assigned: string | null
-      notes: string | null
-      created_at: string
-      model_number: string | null
     }
     Insert: {
       id?: string
-      type: string
+      device_name: string
+      device_type: string
+      model_number: string
       serial_number: string
       assigned_to?: string | null
       status: string
-      date_assigned?: string | null
-      notes?: string | null
-      model_number?: string | null
     }
     Update: {
       id?: string
-      type?: string
+      device_name?: string
+      device_type?: string
+      model_number?: string
       serial_number?: string
       assigned_to?: string | null
       status?: string
-      date_assigned?: string | null
-      notes?: string | null
-      model_number?: string | null
     }
   }
 }
