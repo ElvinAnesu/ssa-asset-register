@@ -31,7 +31,8 @@ export default function DevicesPage() {
     const matchesSearch =
       device.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       device.assignedTo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.type.toLowerCase().includes(searchTerm.toLowerCase())
+      device.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (device.department || "").toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesType = filterType === "all" || device.type.toLowerCase() === filterType.toLowerCase()
     const matchesStatus = filterStatus === "all" || device.status.toLowerCase() === filterStatus.toLowerCase()
@@ -47,6 +48,8 @@ export default function DevicesPage() {
       case "status": return device.status || "";
       case "dateAssigned": return device.dateAssigned || "";
       case "modelNumber": return device.modelNumber || "";
+      case "department": return device.department || "";
+      case "warranty": return device.warranty || "";
       default: return "";
     }
   };
@@ -181,6 +184,8 @@ export default function DevicesPage() {
                   <TableHead className="font-bold text-base px-5 py-3">Device Type</TableHead>
                   <TableHead className="font-bold text-base px-5 py-3">Serial Number</TableHead>
                   <TableHead className="font-bold text-base px-5 py-3">Assigned To</TableHead>
+                  <TableHead className="font-bold text-base px-5 py-3">Department</TableHead>
+                  <TableHead className="font-bold text-base px-5 py-3">Warranty</TableHead>
                   <TableHead className="font-bold text-base px-5 py-3">Status</TableHead>
                   <TableHead className="font-bold text-base px-5 py-3">Date Assigned</TableHead>
                   <TableHead className="font-bold text-base px-5 py-3">Model Number</TableHead>
@@ -204,6 +209,12 @@ export default function DevicesPage() {
                             <Skeleton className="h-5 w-28" />
                           </TableCell>
                           <TableCell>
+                            <Skeleton className="h-5 w-24" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-5 w-24" />
+                          </TableCell>
+                          <TableCell>
                             <Skeleton className="h-5 w-20" />
                           </TableCell>
                           <TableCell>
@@ -222,6 +233,8 @@ export default function DevicesPage() {
                         <TableCell className="px-5 py-3 font-inter text-sm">{device.type}</TableCell>
                         <TableCell className="px-5 py-3 font-inter text-sm">{device.serialNumber}</TableCell>
                         <TableCell className="px-5 py-3 font-inter text-sm">{device.assignedTo || "Not assigned"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.department || "Not assigned"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.warranty || "Not specified"}</TableCell>
                         <TableCell className="px-5 py-3 font-inter text-sm">{getStatusBadge(device.status)}</TableCell>
                         <TableCell className="px-5 py-3 font-inter text-sm">{device.dateAssigned || "Not assigned"}</TableCell>
                         <TableCell className="px-5 py-3 font-inter text-sm">{device.modelNumber || "-"}</TableCell>

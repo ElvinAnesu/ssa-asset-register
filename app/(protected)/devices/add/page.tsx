@@ -27,6 +27,8 @@ export default function AddDevicePage() {
     status: "Active",
     assignedTo: "",
     dateAssigned: "",
+    department: "",
+    warranty: "",
   })
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -203,6 +205,36 @@ export default function AddDevicePage() {
                     aria-label="Date Assigned"
                   />
                   <p className="text-xs text-muted-foreground">Leave empty to use today's date</p>
+                </div>
+                <div className="flex flex-col gap-1 w-full">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Label htmlFor="department" aria-label="Department">Department</Label>
+                    </TooltipTrigger>
+                    <TooltipContent>Department where the device is assigned (optional).</TooltipContent>
+                  </Tooltip>
+                  <Input
+                    id="department"
+                    value={formData.department}
+                    onChange={(e) => handleChange("department", e.target.value)}
+                    placeholder="Enter department name"
+                    aria-label="Department"
+                  />
+                </div>
+                <div className="flex flex-col gap-1 w-full">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Label htmlFor="warranty" aria-label="Warranty">Warranty</Label>
+                    </TooltipTrigger>
+                    <TooltipContent>Device warranty information (optional).</TooltipContent>
+                  </Tooltip>
+                  <Input
+                    id="warranty"
+                    value={formData.warranty}
+                    onChange={(e) => handleChange("warranty", e.target.value)}
+                    placeholder="Enter warranty details"
+                    aria-label="Warranty"
+                  />
                 </div>
                 <div className="flex justify-end col-span-full pt-6">
                   <Button type="submit" disabled={loading} className="px-8 py-2 text-base font-semibold rounded-lg shadow bg-blue-600 hover:bg-blue-700 text-white">

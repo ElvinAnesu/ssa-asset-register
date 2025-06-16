@@ -16,6 +16,8 @@ export interface Device {
   status: DeviceStatus
   dateAssigned: string | null
   notes?: string
+  department?: string
+  warranty?: string
 }
 
 interface DeviceContextType {
@@ -138,6 +140,8 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     status: dbDevice.status as DeviceStatus,
     dateAssigned: dbDevice.date_assigned,
     notes: dbDevice.notes,
+    department: dbDevice.department || "",
+    warranty: dbDevice.warranty || "",
   })
 
   // Map our frontend model to database fields
@@ -150,6 +154,8 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     if (device.status !== undefined) dbDevice.status = device.status
     if (device.dateAssigned !== undefined) dbDevice.date_assigned = device.dateAssigned
     if (device.notes !== undefined) dbDevice.notes = device.notes
+    if (device.department !== undefined) dbDevice.department = device.department || null
+    if (device.warranty !== undefined) dbDevice.warranty = device.warranty || null
     return dbDevice
   }
 

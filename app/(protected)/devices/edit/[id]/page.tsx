@@ -32,6 +32,8 @@ export default function EditDevicePage() {
     assignedTo: "",
     status: "" as DeviceStatus,
     notes: "",
+    department: "",
+    warranty: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -48,6 +50,8 @@ export default function EditDevicePage() {
           assignedTo: device.assignedTo || "",
           status: device.status,
           notes: device.notes || "",
+          department: device.department || "",
+          warranty: device.warranty || "",
         })
       } else {
         setNotFound(true)
@@ -301,6 +305,38 @@ export default function EditDevicePage() {
                         placeholder="Enter any additional notes"
                         className="bg-white"
                         aria-label="Notes"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label htmlFor="department" aria-label="Department">Department</Label>
+                        </TooltipTrigger>
+                        <TooltipContent>Department where the device is assigned (optional).</TooltipContent>
+                      </Tooltip>
+                      <Input
+                        id="department"
+                        value={formData.department}
+                        onChange={(e) => handleInputChange("department", e.target.value)}
+                        placeholder="Enter department name"
+                        className="bg-white"
+                        aria-label="Department"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label htmlFor="warranty" aria-label="Warranty">Warranty</Label>
+                        </TooltipTrigger>
+                        <TooltipContent>Device warranty information (optional).</TooltipContent>
+                      </Tooltip>
+                      <Input
+                        id="warranty"
+                        value={formData.warranty}
+                        onChange={(e) => handleInputChange("warranty", e.target.value)}
+                        placeholder="Enter warranty details"
+                        className="bg-white"
+                        aria-label="Warranty"
                       />
                     </div>
                     <div className="flex gap-4 pt-4">
