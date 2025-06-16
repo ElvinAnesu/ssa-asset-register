@@ -4,7 +4,7 @@ import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { createSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
 
-export type DeviceType = "Computer" | "Laptop" | "Printer" | "Scanner" | "SIM Card" | "Office Phone"
+export type DeviceType = "Computer" | "Laptop" | "Printer" | "Scanner" | "SIM Card" | "Office Phone" | "Router"
 export type DeviceStatus = "Active" | "Available" | "Maintenance"
 
 export interface Device {

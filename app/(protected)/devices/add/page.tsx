@@ -151,6 +151,7 @@ export default function AddDevicePage() {
                       <SelectItem value="Monitor">Monitor</SelectItem>
                       <SelectItem value="Keyboard">Keyboard</SelectItem>
                       <SelectItem value="Mouse">Mouse</SelectItem>
+                      <SelectItem value="Router">Router</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

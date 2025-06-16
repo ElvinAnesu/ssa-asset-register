@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { Monitor, Users, AlertTriangle, CheckCircle, Laptop, Printer, Smartphone, Scan, Phone } from "lucide-react"
+import { Monitor, Users, AlertTriangle, CheckCircle, Laptop, Printer, Smartphone, Scan, Phone, Wifi } from "lucide-react"
 import { useDevices } from "@/context/device-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MockDataBanner } from "@/components/mock-data-banner"
@@ -107,6 +107,12 @@ export default function Dashboard() {
       count: getDeviceCountByType("Laptop"),
       icon: Laptop,
       color: "text-cyan-600 bg-cyan-100",
+    },
+    {
+      type: "Router",
+      count: getDeviceCountByType("Router"),
+      icon: Wifi,
+      color: "text-indigo-600 bg-indigo-100",
     },
   ]
 

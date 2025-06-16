@@ -200,6 +200,7 @@ export default function EditDevicePage() {
                               <SelectItem value="Printer">Printer</SelectItem>
                               <SelectItem value="SIM Card">SIM Card</SelectItem>
                               <SelectItem value="Office Phone">Office Phone</SelectItem>
+                              <SelectItem value="Router">Router</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
