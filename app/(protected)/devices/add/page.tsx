@@ -16,6 +16,28 @@ import Link from "next/link"
 import { useDevices, type DeviceType, type DeviceStatus } from "@/context/device-context"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
+const normalizeDeviceType = (input: string): DeviceType | undefined => {
+  if (!input) return undefined;
+  const normalized = input.trim().toLowerCase();
+  switch (normalized) {
+    case "computer": return "Computer";
+    case "laptop": return "Laptop";
+    case "printer": return "Printer";
+    case "scanner": return "Scanner";
+    case "sim card": return "SIM Card";
+    case "office phone": return "Office Phone";
+    case "router": return "Router";
+    case "pocket wifi": return "Pocket Wifi";
+    case "ups": return "UPS";
+    default: return undefined;
+  }
+};
+
+const capitalize = (input: string) => {
+  if (!input) return "";
+  return input.charAt(0).toUpperCase() + input.slice(1).toLowerCase();
+};
+
 export default function AddDevicePage() {
   const router = useRouter()
   const { addDevice } = useDevices()
@@ -53,11 +75,18 @@ export default function AddDevicePage() {
       return
     }
     try {
-      await addDevice({
+      // Normalize fields except serialNumber and modelNumber
+      const normalizedData = {
         ...formData,
-        type: formData.type as DeviceType,
-        status: formData.status as DeviceStatus,
-        dateAssigned: formData.dateAssigned || new Date().toISOString().split("T")[0],
+        type: normalizeDeviceType(formData.type) as DeviceType,
+        status: capitalize(formData.status) as DeviceStatus,
+        assignedTo: capitalize(formData.assignedTo),
+        department: capitalize(formData.department),
+        warranty: capitalize(formData.warranty),
+      }
+      await addDevice({
+        ...normalizedData,
+        dateAssigned: normalizedData.dateAssigned || new Date().toISOString().split("T")[0],
       })
       router.push("/devices")
     } catch (error) {
@@ -154,6 +183,7 @@ export default function AddDevicePage() {
                       <SelectItem value="Keyboard">Keyboard</SelectItem>
                       <SelectItem value="Mouse">Mouse</SelectItem>
                       <SelectItem value="Router">Router</SelectItem>
+                      <SelectItem value="UPS">UPS</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

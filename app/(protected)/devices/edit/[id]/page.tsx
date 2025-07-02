@@ -19,6 +19,74 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
+const normalizeDeviceType = (input: string): DeviceType | undefined => {
+  if (!input) return undefined;
+  const normalized = input.trim().toLowerCase();
+  switch (normalized) {
+    case "computer": return "Computer";
+    case "laptop": return "Laptop";
+    case "printer": return "Printer";
+    case "scanner": return "Scanner";
+    case "sim card": return "SIM Card";
+    case "office phone": return "Office Phone";
+    case "router": return "Router";
+    case "pocket wifi": return "Pocket Wifi";
+    case "ups": return "UPS";
+    default: return undefined;
+  }
+};
+
+const capitalize = (input: string) => {
+  if (!input) return "";
+  return input.charAt(0).toUpperCase() + input.slice(1).toLowerCase();
+};
+
+// Helper to get all unique, normalized device types
+const getAllDeviceTypes = (devices: any[]) => {
+  const typeSet = new Set<string>()
+  devices.forEach((d: any) => {
+    if (d.type) {
+      // Normalize as in dashboard
+      const normalized = d.type.trim().toLowerCase()
+      switch (normalized) {
+        case "computer":
+        case "compuetr":
+          typeSet.add("Computer"); break;
+        case "laptop":
+          typeSet.add("Laptop"); break;
+        case "printer":
+          typeSet.add("Printer"); break;
+        case "scanner":
+          typeSet.add("Scanner"); break;
+        case "sim card":
+          typeSet.add("SIM Card"); break;
+        case "office phone":
+          typeSet.add("Office Phone"); break;
+        case "router":
+          typeSet.add("Router"); break;
+        case "pocket wifi":
+          typeSet.add("Pocket Wifi"); break;
+        case "ups":
+          typeSet.add("UPS"); break;
+        case "modem":
+        case "mordem":
+          typeSet.add("Modem"); break;
+        case "tablet":
+          typeSet.add("Tablet"); break;
+        case "phone":
+          typeSet.add("Phone"); break;
+        case "server":
+          typeSet.add("Server"); break;
+        case "firewall":
+          typeSet.add("Firewall"); break;
+        default:
+          typeSet.add(d.type.charAt(0).toUpperCase() + d.type.slice(1).toLowerCase());
+      }
+    }
+  })
+  return Array.from(typeSet)
+}
+
 export default function EditDevicePage() {
   const router = useRouter()
   const params = useParams()
@@ -31,7 +99,6 @@ export default function EditDevicePage() {
     modelNumber: "",
     assignedTo: "",
     status: "" as DeviceStatus,
-    notes: "",
     department: "",
     warranty: "",
   })
@@ -49,7 +116,6 @@ export default function EditDevicePage() {
           modelNumber: device.modelNumber || "",
           assignedTo: device.assignedTo || "",
           status: device.status,
-          notes: device.notes || "",
           department: device.department || "",
           warranty: device.warranty || "",
         })
@@ -77,11 +143,18 @@ export default function EditDevicePage() {
     }
     setIsSubmitting(true)
     try {
-      await updateDevice(deviceId, {
+      // Normalize fields except serialNumber and modelNumber
+      const normalizedData = {
         ...formData,
-        type: formData.type as DeviceType,
-        status: formData.status as DeviceStatus,
-        dateAssigned: formData.assignedTo ? new Date().toISOString().split("T")[0] : null,
+        type: normalizeDeviceType(formData.type) as DeviceType,
+        status: capitalize(formData.status) as DeviceStatus,
+        assignedTo: capitalize(formData.assignedTo),
+        department: capitalize(formData.department),
+        warranty: capitalize(formData.warranty),
+      }
+      await updateDevice(deviceId, {
+        ...normalizedData,
+        dateAssigned: normalizedData.assignedTo ? new Date().toISOString().split("T")[0] : null,
       })
       router.push("/devices")
     } catch (err: any) {
@@ -198,13 +271,9 @@ export default function EditDevicePage() {
                               <SelectValue placeholder="Select device type" />
                             </SelectTrigger>
                             <SelectContent className="bg-white">
-                              <SelectItem value="Computer">Computer</SelectItem>
-                              <SelectItem value="Laptop">Laptop</SelectItem>
-                              <SelectItem value="Scanner">Scanner</SelectItem>
-                              <SelectItem value="Printer">Printer</SelectItem>
-                              <SelectItem value="SIM Card">SIM Card</SelectItem>
-                              <SelectItem value="Office Phone">Office Phone</SelectItem>
-                              <SelectItem value="Router">Router</SelectItem>
+                              {getAllDeviceTypes(devices).map((type) => (
+                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -284,6 +353,7 @@ export default function EditDevicePage() {
                               <SelectItem value="Active">Active</SelectItem>
                               <SelectItem value="Available">Available</SelectItem>
                               <SelectItem value="Maintenance">Maintenance</SelectItem>
+                              <SelectItem value="Inactive">Inactive</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -298,14 +368,7 @@ export default function EditDevicePage() {
                         </TooltipTrigger>
                         <TooltipContent>Additional information about the device (optional).</TooltipContent>
                       </Tooltip>
-                      <Textarea
-                        id="notes"
-                        value={formData.notes}
-                        onChange={(e) => handleInputChange("notes", e.target.value)}
-                        placeholder="Enter any additional notes"
-                        className="bg-white"
-                        aria-label="Notes"
-                      />
+             
                     </div>
                     <div className="space-y-2">
                       <Tooltip>

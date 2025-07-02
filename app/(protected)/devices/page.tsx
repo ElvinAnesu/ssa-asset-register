@@ -9,16 +9,68 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Plus, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react"
+import { Search, Plus, MoreHorizontal, Edit, Trash2, Loader2, AlertCircle, Upload } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useDevices, type DeviceStatus } from "@/context/device-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MockDataBanner } from "@/components/mock-data-banner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { toTitleCase } from "@/lib/utils"
+
+// Normalization function for device types
+const normalizeDeviceType = (type: string) => {
+  if (!type) return "Other";
+  const key = type.trim().toLowerCase();
+  switch (key) {
+    case "computer":
+    case "compuetr":
+      return "Computer";
+    case "laptop":
+      return "Laptop";
+    case "printer":
+      return "Printer";
+    case "scanner":
+      return "Scanner";
+    case "sim card":
+      return "SIM Card";
+    case "office phone":
+      return "Office Phone";
+    case "router":
+      return "Router";
+    case "pocket wifi":
+      return "Pocket Wifi";
+    case "ups":
+      return "UPS";
+    case "modem":
+    case "mordem":
+      return "Modem";
+    case "tablet":
+      return "Tablet";
+    case "phone":
+      return "Phone";
+    case "server":
+      return "Server";
+    case "firewall":
+      return "Firewall";
+    default:
+      return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+  }
+}
+
+// Helper to get all unique, normalized device types
+const getAllDeviceTypes = (devices: any[]) => {
+  const typeSet = new Set<string>()
+  devices.forEach((d: any) => {
+    if (d.type) {
+      typeSet.add(normalizeDeviceType(d.type));
+    }
+  })
+  return Array.from(typeSet)
+}
 
 export default function DevicesPage() {
-  const { devices, deleteDevice, loading, error, isUsingMockData, needsTableSetup } = useDevices()
+  const { devices, deleteDevice, updateDevice, loading, error, isUsingMockData, needsTableSetup } = useDevices()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
@@ -26,16 +78,19 @@ export default function DevicesPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<string>("serialNumber")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [devicesPerPage, setDevicesPerPage] = useState(20)
 
   const filteredDevices = devices.filter((device) => {
     const matchesSearch =
-      device.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.assignedTo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (device.serialNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (device.assignedTo || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (device.type || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (device.department || "").toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesType = filterType === "all" || device.type.toLowerCase() === filterType.toLowerCase()
-    const matchesStatus = filterStatus === "all" || device.status.toLowerCase() === filterStatus.toLowerCase()
+    const normalizedType = normalizeDeviceType(device.type || "")
+    const matchesType = filterType === "all" || normalizedType === filterType
+    const matchesStatus = filterStatus === "all" || (device.status || "").toLowerCase() === filterStatus.toLowerCase()
 
     return matchesSearch && matchesType && matchesStatus
   })
@@ -71,6 +126,9 @@ export default function DevicesPage() {
     return 0;
   })
 
+  const totalPages = Math.ceil(sortedDevices.length / devicesPerPage)
+  const paginatedDevices = sortedDevices.slice((currentPage - 1) * devicesPerPage, currentPage * devicesPerPage)
+
   const getStatusBadge = (status: DeviceStatus) => {
     switch (status) {
       case "Active":
@@ -79,6 +137,8 @@ export default function DevicesPage() {
         return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Maintenance</Badge>
       case "Available":
         return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Available</Badge>
+      case "Inactive":
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Inactive</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -106,12 +166,20 @@ export default function DevicesPage() {
         <Separator orientation="vertical" className="mr-2 h-4" />
         <h1 className="text-lg font-semibold">Devices</h1>
         <div className="ml-auto">
-          <Button asChild>
-            <Link href="/devices/add">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Device
-            </Link>
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button asChild>
+              <Link href="/devices/add">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Device
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/devices/upload">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Devices
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -141,13 +209,10 @@ export default function DevicesPage() {
                     <SelectValue placeholder="Device Type" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="computer">Computer</SelectItem>
-                    <SelectItem value="printer">Printer</SelectItem>
-                    <SelectItem value="scanner">Scanner</SelectItem>
-                    <SelectItem value="sim card">SIM Card</SelectItem>
-                    <SelectItem value="office phone">Office Phone</SelectItem>
-                    <SelectItem value="laptop">Laptop</SelectItem>
+                    <SelectItem value="all">All Devices</SelectItem>
+                    {getAllDeviceTypes(devices).map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -159,6 +224,7 @@ export default function DevicesPage() {
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="available">Available</SelectItem>
                     <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -178,6 +244,23 @@ export default function DevicesPage() {
         {/* Devices Table */}
         <Card className="border-none shadow-md flex-1 bg-white">
           <CardContent className="p-0 bg-white">
+            {/* Rows per page selector */}
+            <div className="flex justify-end items-center p-4">
+              <label htmlFor="rows-per-page" className="mr-2 text-sm text-gray-700">Rows per page:</label>
+              <select
+                id="rows-per-page"
+                value={devicesPerPage}
+                onChange={e => {
+                  setDevicesPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border rounded px-2 py-1 text-sm"
+              >
+                {[10, 20, 50, 100].map(num => (
+                  <option key={num} value={num}>{num}</option>
+                ))}
+              </select>
+            </div>
             <Table className="font-inter shadow-md rounded-xl border-none bg-white">
               <TableHeader>
                 <TableRow className="bg-blue-50 rounded-t-xl">
@@ -228,41 +311,46 @@ export default function DevicesPage() {
                           </TableCell>
                         </TableRow>
                       ))
-                  : sortedDevices.map((device, idx) => (
+                  : paginatedDevices.map((device, idx) => (
                       <TableRow key={device.id} className={`transition hover:bg-blue-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/40'} rounded-lg px-5 py-3`}>
-                        <TableCell className="px-5 py-3 font-inter text-sm">{device.type}</TableCell>
-                        <TableCell className="px-5 py-3 font-inter text-sm">{device.serialNumber}</TableCell>
-                        <TableCell className="px-5 py-3 font-inter text-sm">{device.assignedTo || "Not assigned"}</TableCell>
-                        <TableCell className="px-5 py-3 font-inter text-sm">{device.department || "Not assigned"}</TableCell>
-                        <TableCell className="px-5 py-3 font-inter text-sm">{device.warranty || "Not specified"}</TableCell>
-                        <TableCell className="px-5 py-3 font-inter text-sm">{getStatusBadge(device.status)}</TableCell>
-                        <TableCell className="px-5 py-3 font-inter text-sm">{device.dateAssigned || "Not assigned"}</TableCell>
-                        <TableCell className="px-5 py-3 font-inter text-sm">{device.modelNumber || "-"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.type ? toTitleCase(device.type) : "Not Available"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.serialNumber ? device.serialNumber : "Not Available"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.assignedTo ? toTitleCase(device.assignedTo) : "Not assigned"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.department ? toTitleCase(device.department) : "Not assigned"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.warranty && device.warranty.trim().toLowerCase() !== "" && device.warranty.trim().toLowerCase() !== "na" ? toTitleCase(device.warranty) : "Not Available"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.status ? getStatusBadge(device.status) : "Not Available"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.dateAssigned ? toTitleCase(device.dateAssigned) : "Not assigned"}</TableCell>
+                        <TableCell className="px-5 py-3 font-inter text-sm">{device.modelNumber ? toTitleCase(device.modelNumber) : "Not Available"}</TableCell>
                         <TableCell className="px-5 py-3 font-inter text-sm flex gap-2 items-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" disabled={isDeleting === device.id}>
-                                {isDeleting === device.id ? (
-                                  <Loader2 className="h-5 w-5 animate-spin" />
-                                ) : (
-                                  <MoreHorizontal className="h-5 w-5" />
-                                )}
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-white">
+                            <DropdownMenuContent align="end">
                               <DropdownMenuItem asChild>
-                                <Link href={`/devices/edit/${device.id}`} className="flex items-center">
-                                  <Edit className="h-4 w-4 mr-2" />
+                                <Link href={`/devices/edit/${device.id}`}>
+                                  <Edit className="mr-2 h-4 w-4" />
                                   Edit
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="text-red-600"
                                 onClick={() => handleDeleteDevice(device.id)}
-                                disabled={isDeleting === device.id}
+                                className="text-red-600"
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
+                                <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  updateDevice(device.id, { ...device, status: "Inactive" })
+                                }}
+                                className="text-gray-600"
+                              >
+                                <AlertCircle className="mr-2 h-4 w-4" />
+                                Mark as Inactive
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -274,7 +362,7 @@ export default function DevicesPage() {
           </CardContent>
         </Card>
 
-        {!loading && sortedDevices.length === 0 && (
+        {!loading && paginatedDevices.length === 0 && (
           <Card className="border-none shadow-md bg-white">
             <CardContent className="flex flex-col items-center justify-center py-12 bg-white">
               <Search className="h-12 w-12 text-muted-foreground mb-4" />
@@ -287,6 +375,22 @@ export default function DevicesPage() {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* Pagination controls */}
+        {!loading && totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <span className="text-sm text-gray-700 font-medium">Page</span>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`px-3 py-1 rounded border text-sm font-medium ${currentPage === i + 1 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'}`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
         )}
 
         <Dialog open={!!confirmDeleteId} onOpenChange={cancelDelete}>

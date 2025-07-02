@@ -3,146 +3,57 @@ import { Monitor, Users, AlertTriangle, CheckCircle, Laptop, Printer, Smartphone
 import { useDevices } from "@/context/device-context"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { ListChecks, FolderKanban } from "lucide-react"
 
-export default function Dashboard() {
-  const router = useRouter()
-  const {
-    getDeviceCount,
-    getDeviceCountByStatus,
-    getDeviceCountByType,
-    devices,
-    loading,
-    isUsingMockData,
-    needsTableSetup,
-    error,
-  } = useDevices()
-
-  // Redirect to dashboard
-  useEffect(() => {
-    router.push("/dashboard")
-  }, [router])
-
-  // Get unique employees with their device counts
-  const getEmployeeStats = () => {
-    const employeeDevices: { [key: string]: number } = {}
-    devices.forEach((device) => {
-      if (device.assignedTo && device.assignedTo.trim() !== "") {
-        employeeDevices[device.assignedTo] = (employeeDevices[device.assignedTo] || 0) + 1
-      }
-    })
-    return {
-      totalEmployees: Object.keys(employeeDevices).length,
-      employeesWithMultipleDevices: Object.values(employeeDevices).filter((count) => count > 1).length,
-      totalAssignedDevices: Object.values(employeeDevices).reduce((sum, count) => sum + count, 0),
-    }
-  }
-
-  const employeeStats = getEmployeeStats()
-
-  const stats = [
+export default function LandingPage() {
+  const tiles = [
     {
-      title: "Total Devices",
-      value: getDeviceCount(),
-      description: "All registered devices",
-      icon: Monitor,
-      color: "text-purple-600 bg-purple-100",
+      title: "This System",
+      description: "Asset Register System",
+      icon: <Monitor className="w-10 h-10 mb-2 text-purple-600" />,
+      href: "/dashboard",
+      color: "bg-purple-100 hover:bg-purple-200 border-purple-200",
     },
     {
-      title: "Active Devices",
-      value: getDeviceCountByStatus("Active"),
-      description: "Currently in use",
-      icon: CheckCircle,
-      color: "text-green-600 bg-green-100",
+      title: "Activities",
+      description: "View and manage activities",
+      icon: <ListChecks className="w-10 h-10 mb-2 text-blue-600" />,
+      href: "/activities",
+      color: "bg-blue-100 hover:bg-blue-200 border-blue-200",
     },
     {
-      title: "Employees with Devices",
-      value: employeeStats.totalEmployees,
-      description: `${employeeStats.employeesWithMultipleDevices} have multiple devices`,
-      icon: Users,
-      color: "text-blue-600 bg-blue-100",
+      title: "Project",
+      description: "Project management",
+      icon: <FolderKanban className="w-10 h-10 mb-2 text-cyan-600" />,
+      href: "/project",
+      color: "bg-cyan-100 hover:bg-cyan-200 border-cyan-200",
     },
     {
-      title: "Maintenance Required",
-      value: getDeviceCountByStatus("Maintenance"),
-      description: "Needs attention",
-      icon: AlertTriangle,
-      color: "text-amber-600 bg-amber-100",
+      title: "Incident",
+      description: "Report and track incidents",
+      icon: <AlertTriangle className="w-10 h-10 mb-2 text-red-600" />,
+      href: "/incident",
+      color: "bg-red-100 hover:bg-red-200 border-red-200",
     },
   ]
 
-  // Device category counts for the dashboard
-  const deviceCategories = [
-    {
-      type: "Computer",
-      count: getDeviceCountByType("Computer"),
-      icon: Laptop,
-      color: "text-blue-600 bg-blue-100",
-    },
-    {
-      type: "Printer",
-      count: getDeviceCountByType("Printer"),
-      icon: Printer,
-      color: "text-green-600 bg-green-100",
-    },
-    {
-      type: "Scanner",
-      count: getDeviceCountByType("Scanner"),
-      icon: Scan,
-      color: "text-purple-600 bg-purple-100",
-    },
-    {
-      type: "SIM Card",
-      count: getDeviceCountByType("SIM Card"),
-      icon: Smartphone,
-      color: "text-amber-600 bg-amber-100",
-    },
-    {
-      type: "Office Phone",
-      count: getDeviceCountByType("Office Phone"),
-      icon: Phone,
-      color: "text-rose-600 bg-rose-100",
-    },
-  ]
-
-  // Get recent activities from devices
-  const recentActivities = devices
-    .filter((device) => device.dateAssigned)
-    .sort((a, b) => {
-      if (!a.dateAssigned || !b.dateAssigned) return 0
-      return new Date(b.dateAssigned).getTime() - new Date(a.dateAssigned).getTime()
-    })
-    .slice(0, 5)
-
-  // Get employees with multiple devices for display
-  const getEmployeesWithMultipleDevices = () => {
-    const employeeDevices: { [key: string]: any[] } = {}
-    devices.forEach((device) => {
-      if (device.assignedTo && device.assignedTo.trim() !== "") {
-        if (!employeeDevices[device.assignedTo]) {
-          employeeDevices[device.assignedTo] = []
-        }
-        employeeDevices[device.assignedTo].push(device)
-      }
-    })
-
-    return Object.entries(employeeDevices)
-      .filter(([_, deviceList]) => deviceList.length > 1)
-      .slice(0, 5)
-      .map(([employee, deviceList]) => ({
-        employee,
-        deviceCount: deviceList.length,
-        devices: deviceList,
-      }))
-  }
-
-  const employeesWithMultipleDevices = getEmployeesWithMultipleDevices()
-
-  // Show loading indicator while redirecting
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="text-center">
-        <div className="h-8 w-8 animate-spin mx-auto mb-4 rounded-full border-2 border-purple-600 border-t-transparent"></div>
-        <p className="text-gray-600">Loading Asset Register...</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-gray-100 dark:from-gray-900 dark:to-gray-950">
+      <div className="w-full max-w-3xl px-4 py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {tiles.map((tile) => (
+            <Link
+              key={tile.title}
+              href={tile.href}
+              className={`rounded-xl border shadow-md p-8 flex flex-col items-center transition-all duration-200 cursor-pointer ${tile.color}`}
+            >
+              {tile.icon}
+              <span className="text-xl font-semibold mb-1 text-gray-800 dark:text-white">{tile.title}</span>
+              <span className="text-gray-600 dark:text-gray-300 text-sm text-center">{tile.description}</span>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   )

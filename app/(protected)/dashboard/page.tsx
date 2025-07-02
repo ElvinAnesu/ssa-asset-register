@@ -3,12 +3,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { Monitor, Users, AlertTriangle, CheckCircle, Laptop, Printer, Smartphone, Scan, Phone, Wifi } from "lucide-react"
+import { Monitor, Users, AlertTriangle, CheckCircle, Laptop, Printer, Smartphone, Scan, Phone, Wifi, Globe } from "lucide-react"
 import { useDevices } from "@/context/device-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MockDataBanner } from "@/components/mock-data-banner"
 import { ChartContainer } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
+import Link from "next/link"
 
 export default function Dashboard() {
   const {
@@ -70,51 +71,54 @@ export default function Dashboard() {
     },
   ]
 
-  // Device category counts for the dashboard
-  const deviceCategories = [
-    {
-      type: "Computer",
-      count: getDeviceCountByType("Computer"),
-      icon: Laptop,
-      color: "text-blue-600 bg-blue-100",
-    },
-    {
-      type: "Printer",
-      count: getDeviceCountByType("Printer"),
-      icon: Printer,
-      color: "text-green-600 bg-green-100",
-    },
-    {
-      type: "Scanner",
-      count: getDeviceCountByType("Scanner"),
-      icon: Scan,
-      color: "text-purple-600 bg-purple-100",
-    },
-    {
-      type: "SIM Card",
-      count: getDeviceCountByType("SIM Card"),
-      icon: Smartphone,
-      color: "text-amber-600 bg-amber-100",
-    },
-    {
-      type: "Office Phone",
-      count: getDeviceCountByType("Office Phone"),
-      icon: Phone,
-      color: "text-rose-600 bg-rose-100",
-    },
-    {
-      type: "Laptop",
-      count: getDeviceCountByType("Laptop"),
-      icon: Laptop,
-      color: "text-cyan-600 bg-cyan-100",
-    },
-    {
-      type: "Router",
-      count: getDeviceCountByType("Router"),
-      icon: Wifi,
-      color: "text-indigo-600 bg-indigo-100",
-    },
-  ]
+  // Device type normalization map
+  const deviceTypeMap: Record<string, { label: string, icon: any, color: string }> = {
+    "computer": { label: "Computer", icon: Laptop, color: "text-blue-600 bg-blue-100" },
+    "compuetr": { label: "Computer", icon: Laptop, color: "text-blue-600 bg-blue-100" },
+    "laptop": { label: "Laptop", icon: Laptop, color: "text-cyan-600 bg-cyan-100" },
+    "printer": { label: "Printer", icon: Printer, color: "text-green-600 bg-green-100" },
+    "scanner": { label: "Scanner", icon: Scan, color: "text-purple-600 bg-purple-100" },
+    "sim card": { label: "SIM Card", icon: Smartphone, color: "text-amber-600 bg-amber-100" },
+    "office phone": { label: "Office Phone", icon: Phone, color: "text-rose-600 bg-rose-100" },
+    "router": { label: "Router", icon: Wifi, color: "text-indigo-600 bg-indigo-100" },
+    "pocket wifi": { label: "Pocket Wifi", icon: Globe, color: "text-pink-600 bg-pink-100" },
+    "ups": { label: "UPS", icon: Monitor, color: "text-gray-700 bg-gray-100" },
+    "modem": { label: "Modem", icon: Globe, color: "text-yellow-700 bg-yellow-100" },
+    "mordem": { label: "Modem", icon: Globe, color: "text-yellow-700 bg-yellow-100" },
+    "tablet": { label: "Tablet", icon: Smartphone, color: "text-green-700 bg-green-100" },
+    "phone": { label: "Phone", icon: Phone, color: "text-blue-700 bg-blue-100" },
+    "server": { label: "Server", icon: Monitor, color: "text-gray-800 bg-gray-200" },
+    "firewall": { label: "Firewall", icon: Globe, color: "text-red-700 bg-red-100" },
+    // Add more as needed
+  }
+
+  function normalizeDeviceType(type: string) {
+    if (!type) return "Other"
+    const key = type.trim().toLowerCase()
+    return deviceTypeMap[key]?.label || (key ? key.charAt(0).toUpperCase() + key.slice(1) : "Other")
+  }
+
+  // Build normalized device categories with accurate counts
+  const normalizedCategoriesMap: Record<string, { count: number, icon: any, color: string }> = {}
+  devices.forEach((device) => {
+    const key = device.type ? device.type.trim().toLowerCase() : "other"
+    const config = deviceTypeMap[key]
+    const label = config?.label || (key ? key.charAt(0).toUpperCase() + key.slice(1) : "Other")
+    if (!normalizedCategoriesMap[label]) {
+      normalizedCategoriesMap[label] = {
+        count: 0,
+        icon: config?.icon || Monitor,
+        color: config?.color || "text-gray-700 bg-gray-100",
+      }
+    }
+    normalizedCategoriesMap[label].count++
+  })
+  const normalizedDeviceCategories = Object.entries(normalizedCategoriesMap).map(([label, { count, icon, color }]) => ({
+    type: label,
+    count,
+    icon,
+    color,
+  }))
 
   // Get recent activities from devices
   const recentActivities = devices
@@ -165,6 +169,11 @@ export default function Dashboard() {
           <h1 className="text-lg font-semibold">Dashboard</h1>
           <p className="text-xs text-muted-foreground">Hesu Investment Limited</p>
         </div>
+        <div className="ml-auto">
+          <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold shadow hover:bg-purple-700 transition">
+            Back to Landing Page
+          </Link>
+        </div>
       </header>
       <div className="flex flex-1 flex-col gap-6 p-6 bg-white min-h-[calc(100vh-4rem)]">
         <MockDataBanner isVisible={isUsingMockData} needsTableSetup={needsTableSetup} error={error} />
@@ -208,22 +217,29 @@ export default function Dashboard() {
             <CardDescription>Total number of devices by category</CardDescription>
           </CardHeader>
           <CardContent className="bg-white">
-            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {loading
-                ? Array(6)
-                    .fill(0)
-                    .map((_, i) => (
-                      <Card key={i} className="overflow-hidden border-none shadow-sm bg-white">
-                        <CardHeader className="bg-gray-100 p-3">
-                          <Skeleton className="h-5 w-20" />
-                        </CardHeader>
-                        <CardContent className="p-3 pt-4 bg-white text-center">
-                          <Skeleton className="h-8 w-8 mx-auto mb-2" />
-                          <Skeleton className="h-4 w-12 mx-auto" />
-                        </CardContent>
-                      </Card>
-                    ))
-                : deviceCategories.map((category) => (
+            {loading
+              ? Array(6)
+                  .fill(0)
+                  .map((_, i) => (
+                    <Card key={i} className="overflow-hidden border-none shadow-sm bg-white">
+                      <CardHeader className="bg-gray-100 p-3">
+                        <Skeleton className="h-5 w-20" />
+                      </CardHeader>
+                      <CardContent className="p-3 pt-4 bg-white text-center">
+                        <Skeleton className="h-8 w-8 mx-auto mb-2" />
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                      </CardContent>
+                    </Card>
+                  ))
+              : (
+                <div
+                  className="grid gap-4"
+                  style={{
+                    gridTemplateRows: 'repeat(2, 1fr)',
+                    gridTemplateColumns: `repeat(${Math.ceil(normalizedDeviceCategories.length / 2)}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {normalizedDeviceCategories.map((category) => (
                     <Card key={category.type} className="overflow-hidden border-none shadow-sm bg-white">
                       <CardHeader
                         className={`${category.color} p-3 flex flex-row items-center justify-between space-y-0`}
@@ -237,7 +253,8 @@ export default function Dashboard() {
                       </CardContent>
                     </Card>
                   ))}
-            </div>
+                </div>
+              )}
           </CardContent>
         </Card>
 

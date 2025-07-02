@@ -4,8 +4,8 @@ import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { createSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
 
-export type DeviceType = "Computer" | "Laptop" | "Printer" | "Scanner" | "SIM Card" | "Office Phone" | "Router"
-export type DeviceStatus = "Active" | "Available" | "Maintenance"
+export type DeviceType = "Computer" | "Laptop" | "Printer" | "Scanner" | "SIM Card" | "Office Phone" | "Router" | "Pocket Wifi" | "UPS"
+export type DeviceStatus = "Active" | "Available" | "Maintenance" | "Inactive"
 
 export interface Device {
   id: string
@@ -117,6 +117,16 @@ const initialDevices: Device[] = [
     status: "Available",
     dateAssigned: null,
     notes: "Portable scanner - Epson WorkForce",
+  },
+  {
+    id: "9",
+    type: "Pocket Wifi",
+    serialNumber: "POCKET-009-2024",
+    modelNumber: "Huawei E5577",
+    assignedTo: "Alice Blue",
+    status: "Active",
+    dateAssigned: "2024-02-10",
+    notes: "Mobile internet device - Huawei E5577",
   },
 ]
 
@@ -362,7 +372,8 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
   }
 
   const getDevicesByType = (type: DeviceType) => {
-    return devices.filter((device) => device.type === type)
+    const normalizedType = type.trim().toLowerCase();
+    return devices.filter((device) => device.type && device.type.trim().toLowerCase() === normalizedType);
   }
 
   const getDevicesByStatus = (status: DeviceStatus) => {
@@ -383,7 +394,8 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const getDeviceCount = () => devices.length
 
   const getDeviceCountByType = (type: DeviceType) => {
-    return devices.filter((device) => device.type === type).length
+    const normalizedType = type.trim().toLowerCase();
+    return devices.filter((device) => device.type && device.type.trim().toLowerCase() === normalizedType).length;
   }
 
   const getDeviceCountByStatus = (status: DeviceStatus) => {
