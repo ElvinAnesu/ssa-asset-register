@@ -63,7 +63,7 @@ export default function ProjectPage() {
         setLoading(false)
         return
       }
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseClient() as NonNullable<ReturnType<typeof createSupabaseClient>>
       const { data, error } = await supabase
         .from("project")
         .select("id, name, description, status, start_date, end_date, created_at")
@@ -73,7 +73,17 @@ export default function ProjectPage() {
         setLoading(false)
         return
       }
-      setProjects(data || [])
+      setProjects(
+        (data || []).map((item: any) => ({
+          id: Number(item.id),
+          name: String(item.name),
+          description: String(item.description),
+          status: String(item.status) as ProjectStatus,
+          start_date: String(item.start_date),
+          end_date: String(item.end_date),
+          created_at: String(item.created_at),
+        }))
+      )
       setLoading(false)
     }
     fetchProjects()
@@ -101,7 +111,7 @@ export default function ProjectPage() {
   const closeAdd = () => { setShowAdd(false); setForm(defaultForm) }
   const saveAdd = async () => {
     if (!form.name || !form.start_date || !form.end_date) return
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseClient() as NonNullable<ReturnType<typeof createSupabaseClient>>
     const { data, error } = await supabase
       .from("project")
       .insert({
@@ -117,7 +127,16 @@ export default function ProjectPage() {
       return
     }
     if (data && data[0]) {
-      setProjects(prev => [data[0], ...prev])
+      const newProject: Project = {
+        id: Number(data[0].id),
+        name: String(data[0].name),
+        description: String(data[0].description),
+        status: String(data[0].status) as ProjectStatus,
+        start_date: String(data[0].start_date),
+        end_date: String(data[0].end_date),
+        created_at: String(data[0].created_at),
+      }
+      setProjects(prev => [newProject, ...prev])
     }
     closeAdd()
   }
@@ -137,7 +156,8 @@ export default function ProjectPage() {
   const closeEdit = () => { setShowEdit(false); setEditId(null); setForm(defaultForm) }
   const saveEdit = async () => {
     if (!form.name || !form.start_date || !form.end_date) return
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseClient() as NonNullable<ReturnType<typeof createSupabaseClient>>
+    if (editId == null) return;
     const { error } = await supabase
       .from("project")
       .update({
@@ -160,7 +180,7 @@ export default function ProjectPage() {
 
   // Delete Project
   const deleteProject = async (id: number) => {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseClient() as NonNullable<ReturnType<typeof createSupabaseClient>>
     const { error } = await supabase
       .from("project")
       .delete()
@@ -483,7 +503,11 @@ export default function ProjectPage() {
                 <h2 className="text-xl font-bold mb-4">Confirm Delete</h2>
                 <p>Are you sure you want to delete this project?</p>
                 <div className="flex gap-2 mt-4">
-                  <Button onClick={() => { deleteProject(deleteId!); setShowDelete(false) }} className="flex-1 bg-red-600 hover:bg-red-700 text-white">Delete</Button>
+                  <Button onClick={() => {
+                    if (deleteId == null) return;
+                    deleteProject(deleteId);
+                    setShowDelete(false);
+                  }} className="flex-1 bg-red-600 hover:bg-red-700 text-white">Delete</Button>
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setShowDelete(false)}>Cancel</Button>
                 </div>
               </div>

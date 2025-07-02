@@ -149,7 +149,7 @@ export default function IncidentPage() {
   const closeAdd = () => { setShowAdd(false); setForm(getDefaultIncident()) }
   const saveAdd = async () => {
     if (!form.title || !form.status || !form.date) return
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseClient() as NonNullable<ReturnType<typeof createSupabaseClient>>
     const { data, error } = await supabase
       .from("incident")
       .insert({
@@ -164,7 +164,15 @@ export default function IncidentPage() {
       return
     }
     if (data && data[0]) {
-      setIncidents(prev => [data[0], ...prev])
+      const newIncident: Incident = {
+        id: Number(data[0].id),
+        created_at: String(data[0].created_at),
+        title: String(data[0].title),
+        description: String(data[0].description),
+        status: String(data[0].status),
+        date: String(data[0].date),
+      }
+      setIncidents(prev => [newIncident, ...prev])
     }
     closeAdd()
   }
@@ -178,7 +186,7 @@ export default function IncidentPage() {
   const closeEdit = () => { setShowEdit(false); setEditIdx(null); setForm(getDefaultIncident()) }
   const saveEdit = async () => {
     if (!form.title || !form.status || !form.date) return
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseClient() as NonNullable<ReturnType<typeof createSupabaseClient>>
     const { error } = await supabase
       .from("incident")
       .update({
@@ -192,14 +200,22 @@ export default function IncidentPage() {
       setError(error.message)
       return
     }
-    setIncidents(prev => prev.map(i => i.id === form.id ? { ...i, ...form } : i))
+    setIncidents(prev => prev.map(i =>
+      i.id === form.id ? {
+        ...i,
+        title: form.title,
+        description: form.description,
+        status: form.status,
+        date: form.date,
+      } : i
+    ))
     closeEdit()
   }
 
   // Delete Incident
   const deleteIncident = async (idx: number) => {
     const incident = paged[idx]
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseClient() as NonNullable<ReturnType<typeof createSupabaseClient>>
     const { error } = await supabase
       .from("incident")
       .delete()
@@ -221,7 +237,7 @@ export default function IncidentPage() {
         setLoading(false)
         return
       }
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseClient() as NonNullable<ReturnType<typeof createSupabaseClient>>
       const { data, error } = await supabase
         .from("incident")
         .select("id, created_at, title, description, status, date")
@@ -231,7 +247,16 @@ export default function IncidentPage() {
         setLoading(false)
         return
       }
-      setIncidents(data || [])
+      setIncidents(
+        (data || []).map((item: any) => ({
+          id: Number(item.id),
+          created_at: String(item.created_at),
+          title: String(item.title),
+          description: String(item.description),
+          status: String(item.status),
+          date: String(item.date),
+        }))
+      )
       setLoading(false)
     }
     fetchIncidents()
