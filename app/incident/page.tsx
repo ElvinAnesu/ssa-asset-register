@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Edit, Trash2, X, BarChart3, ListChecks, FileDown } from "lucide-react"
@@ -9,10 +9,13 @@ import Link from "next/link"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { Badge } from "@/components/ui/badge"
+import { createSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
 
 const statusOptions = ["Open", "In Progress", "Resolved", "Closed"]
 
 type Incident = {
+  id: number;
+  created_at: string;
   title: string;
   description: string;
   status: string;
@@ -21,6 +24,8 @@ type Incident = {
 
 function getDefaultIncident() {
   return {
+    id: 0,
+    created_at: "",
     title: "",
     description: "",
     status: "Open",
@@ -42,6 +47,8 @@ export default function IncidentPage() {
   const [page, setPage] = useState(1)
   const [showDelete, setShowDelete] = useState(false)
   const [deleteIdx, setDeleteIdx] = useState<number|null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // Analytics data
   const chartData = statusOptions.map(status => ({
@@ -140,9 +147,25 @@ export default function IncidentPage() {
   // Add Incident
   const openAdd = () => { setForm(getDefaultIncident()); setShowAdd(true) }
   const closeAdd = () => { setShowAdd(false); setForm(getDefaultIncident()) }
-  const saveAdd = () => {
+  const saveAdd = async () => {
     if (!form.title || !form.status || !form.date) return
-    setIncidents(prev => [{ ...form }, ...prev])
+    const supabase = createSupabaseClient()
+    const { data, error } = await supabase
+      .from("incident")
+      .insert({
+        title: form.title,
+        description: form.description,
+        status: form.status,
+        date: form.date,
+      })
+      .select()
+    if (error) {
+      setError(error.message)
+      return
+    }
+    if (data && data[0]) {
+      setIncidents(prev => [data[0], ...prev])
+    }
     closeAdd()
   }
 
@@ -153,14 +176,81 @@ export default function IncidentPage() {
     setShowEdit(true)
   }
   const closeEdit = () => { setShowEdit(false); setEditIdx(null); setForm(getDefaultIncident()) }
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!form.title || !form.status || !form.date) return
-    setIncidents(prev => prev.map((i, idx) => idx === editIdx ? { ...form } : i))
+    const supabase = createSupabaseClient()
+    const { error } = await supabase
+      .from("incident")
+      .update({
+        title: form.title,
+        description: form.description,
+        status: form.status,
+        date: form.date,
+      })
+      .eq("id", form.id)
+    if (error) {
+      setError(error.message)
+      return
+    }
+    setIncidents(prev => prev.map(i => i.id === form.id ? { ...i, ...form } : i))
     closeEdit()
   }
 
   // Delete Incident
-  const deleteIncident = (idx: number) => setIncidents(prev => prev.filter((_, i) => i !== idx))
+  const deleteIncident = async (idx: number) => {
+    const incident = paged[idx]
+    const supabase = createSupabaseClient()
+    const { error } = await supabase
+      .from("incident")
+      .delete()
+      .eq("id", incident.id)
+    if (error) {
+      setError(error.message)
+      return
+    }
+    setIncidents(prev => prev.filter(i => i.id !== incident.id))
+  }
+
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      setLoading(true)
+      setError(null)
+      const supabaseConfigured = isSupabaseConfigured()
+      if (!supabaseConfigured) {
+        setError("Supabase is not configured.")
+        setLoading(false)
+        return
+      }
+      const supabase = createSupabaseClient()
+      const { data, error } = await supabase
+        .from("incident")
+        .select("id, created_at, title, description, status, date")
+        .order("created_at", { ascending: false })
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+        return
+      }
+      setIncidents(data || [])
+      setLoading(false)
+    }
+    fetchIncidents()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-lg text-gray-600">Loading incidents...</span>
+      </div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-lg text-red-600">{error}</span>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 flex">

@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Edit, Trash2, X, BarChart3, FolderKanban, FileDown } from "lucide-react"
@@ -8,6 +8,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LabelList } 
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { Badge } from "@/components/ui/badge"
+import { createSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
 
 // Types
 const statusOptions = ["Planned", "In Progress", "Completed"] as const;
@@ -18,59 +19,31 @@ interface Project {
   name: string;
   description: string;
   status: ProjectStatus;
-  startDate: string; // ISO string
-  endDate: string; // ISO string
-  createdAt: string; // ISO string
+  start_date: string;
+  end_date: string;
+  created_at: string;
 }
-
-const mockProjects: Project[] = [
-  {
-    id: 1,
-    name: "New Office Setup",
-    description: "Setting up the new office with all required IT infrastructure.",
-    status: "In Progress",
-    startDate: "2024-07-01",
-    endDate: "2024-08-01",
-    createdAt: "2024-07-01",
-  },
-  {
-    id: 2,
-    name: "Asset Tagging",
-    description: "Tagging all assets with barcodes for tracking.",
-    status: "Planned",
-    startDate: "2024-08-10",
-    endDate: "2024-08-20",
-    createdAt: "2024-07-10",
-  },
-  {
-    id: 3,
-    name: "Inventory Audit",
-    description: "Annual audit of all IT assets.",
-    status: "Completed",
-    startDate: "2024-06-01",
-    endDate: "2024-06-15",
-    createdAt: "2024-06-01",
-  },
-];
 
 const navOptions = [
   { key: 'projects', label: 'Projects', icon: <FolderKanban className="h-6 w-6" /> },
   { key: 'analytics', label: 'Analytics', icon: <BarChart3 className="h-6 w-6" /> },
 ]
 
-const defaultForm: Omit<Project, "id" | "createdAt"> = {
+const defaultForm: Omit<Project, "id" | "created_at"> = {
   name: "",
   description: "",
   status: "Planned",
-  startDate: "",
-  endDate: "",
+  start_date: "",
+  end_date: "",
 }
 
 export default function ProjectPage() {
   const [nav, setNav] = useState<'projects' | 'analytics'>('projects')
-  const [projects, setProjects] = useState<Project[]>(mockProjects)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState<Omit<Project, "id" | "createdAt">>(defaultForm)
+  const [form, setForm] = useState<Omit<Project, "id" | "created_at">>(defaultForm)
   const [editId, setEditId] = useState<number | null>(null)
   const [showEdit, setShowEdit] = useState(false)
   const [filterStatus, setFilterStatus] = useState("all")
@@ -79,6 +52,32 @@ export default function ProjectPage() {
   const [page, setPage] = useState(1)
   const [showDelete, setShowDelete] = useState(false)
   const [deleteId, setDeleteId] = useState<number|null>(null)
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      setLoading(true)
+      setError(null)
+      const supabaseConfigured = isSupabaseConfigured()
+      if (!supabaseConfigured) {
+        setError("Supabase is not configured.")
+        setLoading(false)
+        return
+      }
+      const supabase = createSupabaseClient()
+      const { data, error } = await supabase
+        .from("project")
+        .select("id, name, description, status, start_date, end_date, created_at")
+        .order("created_at", { ascending: false })
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+        return
+      }
+      setProjects(data || [])
+      setLoading(false)
+    }
+    fetchProjects()
+  }, [])
 
   // Filtered projects
   const filtered = projects.filter(p => {
@@ -100,16 +99,26 @@ export default function ProjectPage() {
   // Add Project Handlers
   const openAdd = () => { setForm(defaultForm); setShowAdd(true) }
   const closeAdd = () => { setShowAdd(false); setForm(defaultForm) }
-  const saveAdd = () => {
-    if (!form.name || !form.startDate || !form.endDate) return
-    setProjects(prev => [
-      {
-        ...form,
-        id: Math.max(0, ...prev.map(p => p.id)) + 1,
-        createdAt: new Date().toISOString().split("T")[0],
-      },
-      ...prev,
-    ])
+  const saveAdd = async () => {
+    if (!form.name || !form.start_date || !form.end_date) return
+    const supabase = createSupabaseClient()
+    const { data, error } = await supabase
+      .from("project")
+      .insert({
+        name: form.name,
+        description: form.description,
+        status: form.status,
+        start_date: form.start_date,
+        end_date: form.end_date,
+      })
+      .select()
+    if (error) {
+      setError(error.message)
+      return
+    }
+    if (data && data[0]) {
+      setProjects(prev => [data[0], ...prev])
+    }
     closeAdd()
   }
 
@@ -120,14 +129,29 @@ export default function ProjectPage() {
       name: project.name,
       description: project.description,
       status: project.status,
-      startDate: project.startDate,
-      endDate: project.endDate,
+      start_date: project.start_date,
+      end_date: project.end_date,
     })
     setShowEdit(true)
   }
   const closeEdit = () => { setShowEdit(false); setEditId(null); setForm(defaultForm) }
-  const saveEdit = () => {
-    if (!form.name || !form.startDate || !form.endDate) return
+  const saveEdit = async () => {
+    if (!form.name || !form.start_date || !form.end_date) return
+    const supabase = createSupabaseClient()
+    const { error } = await supabase
+      .from("project")
+      .update({
+        name: form.name,
+        description: form.description,
+        status: form.status,
+        start_date: form.start_date,
+        end_date: form.end_date,
+      })
+      .eq("id", editId)
+    if (error) {
+      setError(error.message)
+      return
+    }
     setProjects(prev => prev.map(p =>
       p.id === editId ? { ...p, ...form } : p
     ))
@@ -135,7 +159,18 @@ export default function ProjectPage() {
   }
 
   // Delete Project
-  const deleteProject = (id: number) => setProjects(prev => prev.filter(p => p.id !== id))
+  const deleteProject = async (id: number) => {
+    const supabase = createSupabaseClient()
+    const { error } = await supabase
+      .from("project")
+      .delete()
+      .eq("id", id)
+    if (error) {
+      setError(error.message)
+      return
+    }
+    setProjects(prev => prev.filter(p => p.id !== id))
+  }
 
   // PDF Export
   const exportToPDF = () => {
@@ -163,8 +198,8 @@ export default function ProjectPage() {
         project.name,
         project.description,
         project.status,
-        project.startDate,
-        project.endDate
+        project.start_date,
+        project.end_date
       ]),
       styles: {
         fontSize: 9,
@@ -208,6 +243,21 @@ export default function ProjectPage() {
     }
     doc.save(`projects_${Date.now()}.pdf`)
     return doc
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-lg text-gray-600">Loading projects...</span>
+      </div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-lg text-red-600">{error}</span>
+      </div>
+    )
   }
 
   return (
@@ -298,8 +348,8 @@ export default function ProjectPage() {
                               "bg-gray-100 text-gray-700"
                             }>{project.status}</Badge>
                           </td>
-                          <td className="py-2 px-3">{project.startDate}</td>
-                          <td className="py-2 px-3">{project.endDate}</td>
+                          <td className="py-2 px-3">{project.start_date}</td>
+                          <td className="py-2 px-3">{project.end_date}</td>
                           <td className="py-2 px-3 flex gap-2">
                             <Button size="icon" variant="ghost" onClick={() => openEdit(project)} title="Edit">
                               <Edit className="h-4 w-4 text-cyan-600" />
@@ -369,11 +419,11 @@ export default function ProjectPage() {
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <label className="block text-sm font-medium mb-1">Start Date</label>
-                      <input type="date" className="w-full border rounded px-3 py-2" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} required />
+                      <input type="date" className="w-full border rounded px-3 py-2" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} required />
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-medium mb-1">End Date</label>
-                      <input type="date" className="w-full border rounded px-3 py-2" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} required />
+                      <input type="date" className="w-full border rounded px-3 py-2" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} required />
                     </div>
                   </div>
                   <div className="flex gap-2 mt-4">
@@ -410,11 +460,11 @@ export default function ProjectPage() {
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <label className="block text-sm font-medium mb-1">Start Date</label>
-                      <input type="date" className="w-full border rounded px-3 py-2" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} required />
+                      <input type="date" className="w-full border rounded px-3 py-2" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} required />
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-medium mb-1">End Date</label>
-                      <input type="date" className="w-full border rounded px-3 py-2" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} required />
+                      <input type="date" className="w-full border rounded px-3 py-2" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} required />
                     </div>
                   </div>
                   <div className="flex gap-2 mt-4">

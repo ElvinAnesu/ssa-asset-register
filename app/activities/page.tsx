@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import { ChartContainer } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import { createSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
 
 // Types
 type ActivityStatus = "Pending" | "In Progress" | "Completed";
@@ -27,53 +28,6 @@ interface Activity {
   priority: Priority;
   createdAt: string; // ISO string
 }
-
-const mockActivities: Activity[] = [
-  {
-    id: 1,
-    title: "Inventory Audit",
-    description: "Complete the quarterly inventory check for all IT assets.",
-    status: "Pending",
-    dueDate: "2024-07-10",
-    assignedBy: "Admin",
-    assignedTo: "John Doe",
-    priority: "High",
-    createdAt: "2024-07-01",
-  },
-  {
-    id: 2,
-    title: "Device Assignment",
-    description: "Assign new laptops to the HR department.",
-    status: "In Progress",
-    dueDate: "2024-07-12",
-    assignedBy: "Jane Smith",
-    assignedTo: "Mary Johnson",
-    priority: "Medium",
-    createdAt: "2024-07-03",
-  },
-  {
-    id: 3,
-    title: "Printer Maintenance",
-    description: "Schedule maintenance for all office printers.",
-    status: "Completed",
-    dueDate: "2024-07-01",
-    assignedBy: "Admin",
-    assignedTo: "John Doe",
-    priority: "Low",
-    createdAt: "2024-06-25",
-  },
-  {
-    id: 4,
-    title: "Network Upgrade",
-    description: "Upgrade office network switches.",
-    status: "Pending",
-    dueDate: "2024-07-15",
-    assignedBy: "IT Manager",
-    assignedTo: "Mary Johnson",
-    priority: "High",
-    createdAt: "2024-07-05",
-  },
-]
 
 const statusColors: Record<ActivityStatus, string> = {
   "Pending": "bg-yellow-100 text-yellow-800",
@@ -113,7 +67,9 @@ const statusOptions = ["Pending", "In Progress", "Completed"];
 const priorityOptions = ["High", "Medium", "Low"];
 
 export default function ActivitiesPage() {
-  const [activities, setActivities] = useState<Activity[]>(mockActivities)
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState<Omit<Activity, "id" | "createdAt">>(defaultForm)
   const [editId, setEditId] = useState<number | null>(null)
@@ -126,6 +82,46 @@ export default function ActivitiesPage() {
   const [page, setPage] = useState(1)
   const pageSize = 5
   const [nav, setNav] = useState<'activities' | 'analytics'>('activities')
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      setLoading(true)
+      setError(null)
+      const supabaseConfigured = isSupabaseConfigured()
+      if (!supabaseConfigured) {
+        setError("Supabase is not configured.")
+        setLoading(false)
+        return
+      }
+      const supabase = createSupabaseClient()
+      const { data, error } = await supabase
+        .from("activities")
+        .select("id, title, description, status, due_date, priority, created_at")
+        .order("created_at", { ascending: false })
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+        return
+      }
+      if (data) {
+        setActivities(
+          data.map((a: any) => ({
+            id: a.id,
+            title: a.title,
+            description: a.description,
+            status: a.status as ActivityStatus,
+            dueDate: a.due_date,
+            assignedBy: "", // Not in schema
+            assignedTo: "", // Not in schema
+            priority: a.priority as Priority,
+            createdAt: a.created_at,
+          }))
+        )
+      }
+      setLoading(false)
+    }
+    fetchActivities()
+  }, [])
 
   // Filtered and searched activities
   const filtered = activities.filter(a => {
@@ -154,16 +150,35 @@ export default function ActivitiesPage() {
     setShowAdd(false)
     setForm(defaultForm)
   }
-  const saveAdd = () => {
+  const saveAdd = async () => {
     if (!form.title || !form.dueDate) return
-    setActivities(prev => [
-      {
-        ...form,
-        id: Math.max(0, ...prev.map(a => a.id)) + 1,
-        createdAt: new Date().toISOString().split("T")[0],
-      },
-      ...prev,
-    ])
+    const supabase = createSupabaseClient()
+    const { data, error } = await supabase
+      .from("activities")
+      .insert({
+        title: form.title,
+        description: form.description,
+        status: form.status,
+        due_date: form.dueDate,
+        priority: form.priority,
+      })
+      .select()
+    if (error) {
+      toast({ title: "Failed to add activity", description: error.message, variant: "destructive" })
+      return
+    }
+    if (data && data[0]) {
+      setActivities(prev => [
+        {
+          ...form,
+          id: data[0].id,
+          createdAt: data[0].created_at,
+          assignedBy: "",
+          assignedTo: "",
+        },
+        ...prev,
+      ])
+    }
     toast({ title: "Activity added" })
     closeAdd()
   }
@@ -187,8 +202,24 @@ export default function ActivitiesPage() {
     setEditId(null)
     setForm(defaultForm)
   }
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!form.title || !form.dueDate) return
+    const supabase = createSupabaseClient()
+    const { error } = await supabase
+      .from("activities")
+      .update({
+        title: form.title,
+        description: form.description,
+        status: form.status,
+        due_date: form.dueDate,
+        priority: form.priority,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", editId)
+    if (error) {
+      toast({ title: "Failed to update activity", description: error.message, variant: "destructive" })
+      return
+    }
     setActivities(prev => prev.map(a =>
       a.id === editId ? { ...a, ...form } : a
     ))
@@ -205,10 +236,34 @@ export default function ActivitiesPage() {
     setShowDelete(false)
     setDeleteId(null)
   }
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+    const supabase = createSupabaseClient()
+    const { error } = await supabase
+      .from("activities")
+      .delete()
+      .eq("id", deleteId)
+    if (error) {
+      toast({ title: "Failed to delete activity", description: error.message, variant: "destructive" })
+      return
+    }
     setActivities(prev => prev.filter(a => a.id !== deleteId))
     toast({ title: "Activity deleted" })
     closeDelete()
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-lg text-gray-600">Loading activities...</span>
+      </div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-lg text-red-600">{error}</span>
+      </div>
+    )
   }
 
   return (
