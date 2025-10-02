@@ -1,4 +1,4 @@
-# Hesu Investment Limited - Asset Register System
+# SSA Logistics - Asset Register System
 
 A modern, full-featured asset management system built with Next.js 15, Supabase, and shadcn/ui.
 
@@ -223,4 +223,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Built with ❤️ for Hesu Investment Limited**
+**Built with ❤️ for SSA Logistics**

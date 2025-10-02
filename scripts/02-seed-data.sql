@@ -1,4 +1,4 @@
--- Insert sample data for Hesu Investment Limited
+-- Insert sample data for SSA Logistics
 INSERT INTO devices (type, serial_number, assigned_to, status, date_assigned, notes)
 VALUES
   ('Computer', 'COMP-001-2024', 'John Doe', 'Active', '2024-01-15', 'Main workstation - Dell OptiPlex 7090'),

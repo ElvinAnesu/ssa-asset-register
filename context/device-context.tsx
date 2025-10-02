@@ -24,8 +24,6 @@ interface DeviceContextType {
   devices: Device[]
   loading: boolean
   error: string | null
-  isUsingMockData: boolean
-  needsTableSetup: boolean
   addDevice: (device: Omit<Device, "id">) => Promise<void>
   updateDevice: (id: string, device: Partial<Device>) => Promise<void>
   deleteDevice: (id: string) => Promise<void>
@@ -42,102 +40,12 @@ interface DeviceContextType {
 
 const DeviceContext = createContext<DeviceContextType | undefined>(undefined)
 
-// Sample initial data for when Supabase is not configured or table doesn't exist
-const initialDevices: Device[] = [
-  {
-    id: "1",
-    type: "Computer",
-    serialNumber: "COMP-001-2024",
-    modelNumber: "OptiPlex 7090",
-    assignedTo: "John Doe",
-    status: "Active",
-    dateAssigned: "2024-01-15",
-    notes: "Main workstation - Dell OptiPlex 7090",
-  },
-  {
-    id: "2",
-    type: "Printer",
-    serialNumber: "PRNT-002-2024",
-    modelNumber: "LaserJet Pro",
-    assignedTo: "Jane Smith",
-    status: "Active",
-    dateAssigned: "2024-01-20",
-    notes: "Color laser printer - HP LaserJet Pro",
-  },
-  {
-    id: "3",
-    type: "Scanner",
-    serialNumber: "SCAN-003-2024",
-    assignedTo: "John Doe",
-    status: "Active",
-    dateAssigned: "2024-01-10",
-    notes: "Document scanner - Canon imageFORMULA",
-  },
-  {
-    id: "4",
-    type: "SIM Card",
-    serialNumber: "SIM-004-2024",
-    assignedTo: "Sarah Wilson",
-    status: "Active",
-    dateAssigned: "2024-01-25",
-    notes: "Company phone SIM - MTN Corporate",
-  },
-  {
-    id: "5",
-    type: "Office Phone",
-    serialNumber: "PHONE-005-2024",
-    assignedTo: "John Doe",
-    status: "Maintenance",
-    dateAssigned: "2024-01-12",
-    notes: "Desk phone - needs new battery",
-  },
-  {
-    id: "6",
-    type: "Computer",
-    serialNumber: "COMP-006-2024",
-    assignedTo: "",
-    status: "Available",
-    dateAssigned: null,
-    notes: "Spare laptop - Lenovo ThinkPad",
-  },
-  {
-    id: "7",
-    type: "Printer",
-    serialNumber: "PRNT-007-2024",
-    assignedTo: "Michael Brown",
-    status: "Active",
-    dateAssigned: "2024-02-01",
-    notes: "Black and white printer - Brother HL-L2350DW",
-  },
-  {
-    id: "8",
-    type: "Scanner",
-    serialNumber: "SCAN-008-2024",
-    assignedTo: "",
-    status: "Available",
-    dateAssigned: null,
-    notes: "Portable scanner - Epson WorkForce",
-  },
-  {
-    id: "9",
-    type: "Pocket Wifi",
-    serialNumber: "POCKET-009-2024",
-    modelNumber: "Huawei E5577",
-    assignedTo: "Alice Blue",
-    status: "Active",
-    dateAssigned: "2024-02-10",
-    notes: "Mobile internet device - Huawei E5577",
-  },
-]
 
 export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isUsingMockData, setIsUsingMockData] = useState(false)
-  const [needsTableSetup, setNeedsTableSetup] = useState(false)
 
-  const supabaseConfigured = isSupabaseConfigured()
   const supabase = createSupabaseClient()
 
   // Map database fields to our frontend model
@@ -169,64 +77,24 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     return dbDevice
   }
 
-  // Check if the error indicates missing table
-  const isTableMissingError = (error: any) => {
-    return (
-      error?.message?.includes('relation "public.devices" does not exist') ||
-      error?.message?.includes('table "devices" does not exist') ||
-      error?.code === "PGRST116"
-    )
-  }
-
-  // Fetch devices from Supabase or use mock data
+  // Fetch devices from Supabase
   const fetchDevices = async () => {
     try {
       setLoading(true)
-      setNeedsTableSetup(false)
-
-      if (!supabaseConfigured) {
-        // Use mock data when Supabase is not configured
-        console.log("Using mock data - Supabase not configured")
-        setDevices(initialDevices)
-        setIsUsingMockData(true)
-        setError(null)
-        return
-      }
+      setError(null)
 
       const { data, error } = await supabase.from("devices").select("*")
 
       if (error) {
-        if (isTableMissingError(error)) {
-          // Silently use mock data when table doesn't exist
-          console.log("Database table not found - using mock data")
-          setDevices(initialDevices)
-          setIsUsingMockData(true)
-          setNeedsTableSetup(true)
-          setError(null) // Don't show error to user
-          return
-        }
         throw error
       }
 
       const mappedDevices = data.map(mapDbDeviceToDevice)
       setDevices(mappedDevices)
-      setIsUsingMockData(false)
-      setNeedsTableSetup(false)
       setError(null)
     } catch (err: any) {
       console.error("Error fetching devices:", err)
-
-      // Fallback to mock data on any error
-      console.log("Falling back to mock data due to error:", err.message)
-      setDevices(initialDevices)
-      setIsUsingMockData(true)
-
-      if (isTableMissingError(err)) {
-        setNeedsTableSetup(true)
-        setError(null) // Don't show error to user for table setup
-      } else {
-        setError(`Database connection failed. Using demo data.`)
-      }
+      setError(err.message || "Failed to fetch devices from database")
     } finally {
       setLoading(false)
     }
@@ -236,20 +104,18 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchDevices()
 
-    // Set up real-time subscription only if Supabase is configured and table exists
-    if (supabaseConfigured && !needsTableSetup) {
-      const subscription = supabase
-        .channel("devices-changes")
-        .on("postgres_changes", { event: "*", schema: "public", table: "devices" }, () => {
-          fetchDevices()
-        })
-        .subscribe()
+    // Set up real-time subscription
+    const subscription = supabase
+      .channel("devices-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "devices" }, () => {
+        fetchDevices()
+      })
+      .subscribe()
 
-      return () => {
-        subscription.unsubscribe()
-      }
+    return () => {
+      subscription.unsubscribe()
     }
-  }, [supabaseConfigured, needsTableSetup])
+  }, [])
 
   const refreshDevices = async () => {
     await fetchDevices()
@@ -258,33 +124,12 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const addDevice = async (device: Omit<Device, "id">) => {
     try {
       setLoading(true)
-
-      if (!supabaseConfigured || isUsingMockData || needsTableSetup) {
-        // Add to mock data
-        const newDevice = {
-          ...device,
-          id: Math.random().toString(36).substring(2, 9),
-        }
-        setDevices((prev) => [...prev, newDevice])
-        setError(null)
-        return
-      }
+      setError(null)
 
       const dbDevice = mapDeviceToDbDevice(device)
       const { data, error } = await supabase.from("devices").insert(dbDevice).select()
 
       if (error) {
-        if (isTableMissingError(error)) {
-          // Silently fall back to mock data
-          setNeedsTableSetup(true)
-          const newDevice = {
-            ...device,
-            id: Math.random().toString(36).substring(2, 9),
-          }
-          setDevices((prev) => [...prev, newDevice])
-          setError(null)
-          return
-        }
         throw error
       }
 
@@ -305,25 +150,12 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const updateDevice = async (id: string, updatedDevice: Partial<Device>) => {
     try {
       setLoading(true)
-
-      if (!supabaseConfigured || isUsingMockData || needsTableSetup) {
-        // Update mock data
-        setDevices((prev) => prev.map((device) => (device.id === id ? { ...device, ...updatedDevice } : device)))
-        setError(null)
-        return
-      }
+      setError(null)
 
       const dbDevice = mapDeviceToDbDevice(updatedDevice)
       const { error } = await supabase.from("devices").update(dbDevice).eq("id", id)
 
       if (error) {
-        if (isTableMissingError(error)) {
-          // Silently fall back to mock data
-          setNeedsTableSetup(true)
-          setDevices((prev) => prev.map((device) => (device.id === id ? { ...device, ...updatedDevice } : device)))
-          setError(null)
-          return
-        }
         throw error
       }
 
@@ -340,24 +172,11 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const deleteDevice = async (id: string) => {
     try {
       setLoading(true)
-
-      if (!supabaseConfigured || isUsingMockData || needsTableSetup) {
-        // Delete from mock data
-        setDevices((prev) => prev.filter((device) => device.id !== id))
-        setError(null)
-        return
-      }
+      setError(null)
 
       const { error } = await supabase.from("devices").delete().eq("id", id)
 
       if (error) {
-        if (isTableMissingError(error)) {
-          // Silently fall back to mock data
-          setNeedsTableSetup(true)
-          setDevices((prev) => prev.filter((device) => device.id !== id))
-          setError(null)
-          return
-        }
         throw error
       }
 
@@ -412,8 +231,6 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
         devices,
         loading,
         error,
-        isUsingMockData,
-        needsTableSetup,
         addDevice,
         updateDevice,
         deleteDevice,

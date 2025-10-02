@@ -14,7 +14,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useDevices, type DeviceStatus } from "@/context/device-context"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MockDataBanner } from "@/components/mock-data-banner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { toTitleCase } from "@/lib/utils"
 
@@ -70,7 +69,7 @@ const getAllDeviceTypes = (devices: any[]) => {
 }
 
 export default function DevicesPage() {
-  const { devices, deleteDevice, updateDevice, loading, error, isUsingMockData, needsTableSetup } = useDevices()
+  const { devices, deleteDevice, updateDevice, loading, error } = useDevices()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
@@ -184,7 +183,11 @@ export default function DevicesPage() {
       </header>
 
       <div className="flex flex-1 flex-col gap-6 p-6 bg-white min-h-[calc(100vh-4rem)]">
-        <MockDataBanner isVisible={isUsingMockData} needsTableSetup={needsTableSetup} error={error} />
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-600">{error}</p>
+          </div>
+        )}
 
         {/* Search and Filter Controls */}
         <Card className="border-none shadow-md bg-white">
@@ -232,14 +235,6 @@ export default function DevicesPage() {
           </CardContent>
         </Card>
 
-        {/* Error message - only show if not using mock data and not table setup issue */}
-        {error && !isUsingMockData && !needsTableSetup && (
-          <Card className="border-none shadow-md bg-red-50">
-            <CardContent className="p-4">
-              <p className="text-red-600">{error}</p>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Devices Table */}
         <Card className="border-none shadow-md flex-1 bg-white">

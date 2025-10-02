@@ -82,7 +82,7 @@ export default function IncidentPage() {
     const pageWidth = doc.internal.pageSize.width
     // Header
     doc.setFontSize(20)
-    doc.text("Hesu Investment Limited", pageWidth / 2, 15, { align: "center" })
+    doc.text("SSA Logistics", pageWidth / 2, 15, { align: "center" })
     doc.setFontSize(16)
     doc.text("Incident Management Report", pageWidth / 2, 25, { align: "center" })
     doc.setFontSize(10)

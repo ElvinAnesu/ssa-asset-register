@@ -118,7 +118,7 @@ export default function ReportsPage() {
       
       // Add company logo or header
       doc.setFontSize(20)
-      doc.text("Hesu Investment Limited", pageWidth / 2, 15, { align: "center" })
+      doc.text("SSA Logistics", pageWidth / 2, 15, { align: "center" })
       doc.setFontSize(16)
       doc.text("Device Inventory System", pageWidth / 2, 25, { align: "center" })
       
@@ -242,7 +242,7 @@ export default function ReportsPage() {
 
       // Add company info and filters
       const reportInfo = [
-        ["Hesu Investment Limited"],
+        ["SSA Logistics"],
         ["Device Inventory System"],
         ["Report Date:", new Date().toLocaleDateString()],
         ["Total Devices:", filteredDevices.length],

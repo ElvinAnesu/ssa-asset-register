@@ -132,7 +132,7 @@ CREATE POLICY "Allow all operations" ON devices FOR ALL USING (true);`
           </div>
           {getStatusIcon()}
         </div>
-        <CardDescription>Real-time connection status for Hesu Investment Limited database</CardDescription>
+        <CardDescription>Real-time connection status for SSA Logistics database</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3">

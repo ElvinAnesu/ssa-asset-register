@@ -6,7 +6,6 @@ import { Separator } from "@/components/ui/separator"
 import { Monitor, Users, AlertTriangle, CheckCircle, Laptop, Printer, Smartphone, Scan, Phone, Wifi, Globe } from "lucide-react"
 import { useDevices } from "@/context/device-context"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MockDataBanner } from "@/components/mock-data-banner"
 import { ChartContainer } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import Link from "next/link"
@@ -18,8 +17,6 @@ export default function Dashboard() {
     getDeviceCountByType,
     devices,
     loading,
-    isUsingMockData,
-    needsTableSetup,
     error,
   } = useDevices()
 
@@ -167,7 +164,7 @@ export default function Dashboard() {
         <Separator orientation="vertical" className="mr-2 h-4" />
         <div>
           <h1 className="text-lg font-semibold">Dashboard</h1>
-          <p className="text-xs text-muted-foreground">Hesu Investment Limited</p>
+          <p className="text-xs text-muted-foreground">SSA Logistics</p>
         </div>
         <div className="ml-auto">
           <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold shadow hover:bg-purple-700 transition">
@@ -176,7 +173,11 @@ export default function Dashboard() {
         </div>
       </header>
       <div className="flex flex-1 flex-col gap-6 p-6 bg-white min-h-[calc(100vh-4rem)]">
-        <MockDataBanner isVisible={isUsingMockData} needsTableSetup={needsTableSetup} error={error} />
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-600">{error}</p>
+          </div>
+        )}
 
         <h2 className="text-2xl font-bold tracking-tight">Asset Overview</h2>
 

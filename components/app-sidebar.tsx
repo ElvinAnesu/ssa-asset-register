@@ -52,9 +52,9 @@ export function AppSidebar() {
     <Sidebar className="bg-gradient-to-b from-white to-blue-50 shadow-xl rounded-r-3xl min-w-[200px] max-w-[240px] font-inter">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-5 py-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white text-xl font-bold font-inter">HI</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white text-xl font-bold font-inter">SL</div>
           <div className="grid flex-1 text-left leading-tight">
-            <span className="truncate font-bold text-lg font-inter">Hesu Investment Limited</span>
+            <span className="truncate font-bold text-lg font-inter">SSA Logistics</span>
             <span className="truncate text-xs text-muted-foreground font-inter">{getDeviceCount()} Devices Registered</span>
           </div>
         </div>
